@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taller de Plantillas — Pedidos a proveedores</title>
+<style>
+:root{
+  --paper:#F1EAE0;
+  --card:#FBF7F0;
+  --ink:#2B211C;
+  --ink-soft:#5C4B3F;
+  --leather:#8B5E3C;
+  --leather-dark:#6B4527;
+  --thread:#B33A3A;
+  --thread-dark:#7E2626;
+  --wax:#4F7A6B;
+  --wax-dark:#365A4D;
+  --muted:#A79483;
+  --line:#DCD0BF;
+  --font-display: Georgia, 'Times New Roman', serif;
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'Courier New', monospace;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-body);min-height:100vh;}
+.wrap{max-width:960px;margin:0 auto;padding:28px 18px 70px;}
+.top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;border-bottom:2px solid var(--ink);padding-bottom:14px;flex-wrap:wrap;gap:10px;}
+.brand{font-family:var(--font-display);font-weight:700;font-size:26px;letter-spacing:-0.3px;}
+.brand span{color:var(--thread);}
+.sub{font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:1.5px;margin-top:2px;}
+.tabs{display:flex;gap:2px;margin-bottom:22px;overflow-x:auto;border-bottom:1px solid var(--line);}
+.tab{font-family:var(--font-body);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.4px;padding:10px 14px;background:transparent;border:none;border-bottom:3px solid transparent;color:var(--ink-soft);cursor:pointer;white-space:nowrap;}
+.tab.active{color:var(--ink);border-bottom-color:var(--thread);}
+.badge-count{background:var(--thread);color:#fff;font-size:11px;padding:1px 6px;border-radius:10px;margin-left:5px;}
+.panel{display:none;}
+.panel.active{display:block;}
+.hint{color:var(--ink-soft);font-size:13px;margin-bottom:16px;}
+.btn{font-family:var(--font-body);font-weight:600;font-size:13px;background:var(--ink);color:var(--paper);border:none;border-radius:5px;padding:10px 16px;cursor:pointer;}
+.btn:hover{background:var(--leather-dark);}
+.btn.secondary{background:transparent;color:var(--ink);border:1px solid var(--ink);}
+.btn.secondary:hover{background:rgba(0,0,0,0.05);}
+.btn.wax{background:var(--wax);}
+.btn.wax:hover{background:var(--wax-dark);}
+.btn:disabled{opacity:0.4;cursor:not-allowed;}
+input,select,textarea{font-family:var(--font-body);font-size:14px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:4px;padding:9px 10px;}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--leather);}
+.row-actions{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+
+/* Marcar faltantes: grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;}
+.mcard{background:var(--card);border:2px solid var(--line);border-radius:8px;overflow:hidden;cursor:pointer;transition:border-color .15s;text-align:left;padding:0;}
+.mcard.falta{border-color:var(--thread);background:#FBEDEA;}
+.mcard .thumb{width:100%;aspect-ratio:1/1;background:var(--paper) center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;text-align:center;padding:6px;}
+.mcard .info{padding:8px 10px 10px;}
+.mcard .base{font-weight:700;font-size:13px;line-height:1.2;}
+.mcard .variante{font-size:12px;color:var(--ink-soft);margin-top:1px;}
+.mcard .prov{font-size:10px;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);margin-top:4px;}
+.mcard .flag{display:inline-block;margin-top:6px;font-size:11px;font-weight:700;color:var(--thread-dark);}
+
+/* Armar pedido */
+.prov-block{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin-bottom:16px;}
+.prov-block h3{font-family:var(--font-display);margin:0 0 10px;font-size:18px;display:flex;justify-content:space-between;align-items:center;}
+.item-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);}
+.item-row:last-child{border-bottom:none;}
+.item-thumb{width:36px;height:36px;border-radius:4px;background:var(--paper) center/cover no-repeat;flex-shrink:0;}
+.item-name{flex:1;font-size:13px;}
+.item-name b{display:block;font-size:13.5px;}
+.item-name span{color:var(--ink-soft);font-size:12px;}
+.item-qty{width:70px;padding:6px 8px;font-size:13px;}
+.item-unit{font-size:12px;color:var(--ink-soft);width:50px;}
+.msg-box{width:100%;min-height:120px;font-family:var(--font-mono);font-size:13px;margin-top:10px;}
+.prov-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+
+/* Catalogo */
+.cat-group{margin-bottom:22px;}
+.cat-group h3{font-family:var(--font-display);font-size:17px;border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:10px;}
+.cat-base{margin-bottom:14px;}
+.cat-base-title{font-weight:700;font-size:13px;color:var(--leather-dark);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.4px;}
+.cat-row{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px;border-bottom:1px dashed var(--line);}
+.cat-thumb{width:32px;height:32px;border-radius:4px;background:var(--paper) center/cover no-repeat;flex-shrink:0;}
+.cat-row .cname{flex:1;}
+.cat-row .cactions{display:flex;gap:6px;}
+.small-btn{background:transparent;border:1px solid var(--line);color:var(--ink-soft);font-size:11px;padding:4px 8px;border-radius:4px;cursor:pointer;}
+.small-btn:hover{border-color:var(--ink);color:var(--ink);}
+
+/* Historial */
+.hist-item{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:10px;}
+.hist-item .hdate{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+.hist-item .hprov{font-family:var(--font-display);font-size:16px;margin:2px 0 6px;}
+.hist-item ul{margin:0;padding-left:18px;font-size:13px;color:var(--ink-soft);}
+
+.empty{text-align:center;padding:50px 20px;color:var(--muted);}
+.empty h3{font-family:var(--font-display);color:var(--ink-soft);}
+
+/* Modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(43,33,28,0.5);z-index:50;align-items:center;justify-content:center;padding:20px;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--card);border-radius:8px;padding:22px;max-width:440px;width:100%;max-height:88vh;overflow-y:auto;}
+.modal h2{font-family:var(--font-display);font-size:19px;margin:0 0 14px;}
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.4px;}
+.field input,.field select,.field textarea{width:100%;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.modal-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:16px;}
+.img-preview{width:80px;height:80px;border-radius:6px;background:var(--paper) center/cover no-repeat;border:1px solid var(--line);margin-bottom:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:10px;text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <div class="brand">Taller de <span>Plantillas</span></div>
+      <div class="sub">Pedidos a proveedores</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="small-btn" id="btnExportar" title="Descarga un archivo con todos los datos">⬇ Exportar copia</button>
+      <label class="small-btn" style="cursor:pointer;" title="Carga los datos desde un archivo exportado">⬆ Importar copia
+        <input type="file" id="inputImportar" accept=".json" style="display:none;">
+      </label>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="marcar">Marcar faltantes <span class="badge-count" id="countFaltantes" style="display:none;"></span></button>
+    <button class="tab" data-tab="armar">Armar pedido</button>
+    <button class="tab" data-tab="catalogo">Catálogo</button>
+    <button class="tab" data-tab="historial">Historial</button>
+  </div>
+
+  <!-- MARCAR -->
+  <div class="panel active" id="panel-marcar">
+    <div class="hint">Tocá un material apenas veas que se está por terminar. Se guarda en el momento, así no depende de acordarse después.</div>
+    <div id="marcarGrid" class="grid"></div>
+  </div>
+
+  <!-- ARMAR PEDIDO -->
+  <div class="panel" id="panel-armar">
+    <div class="hint">Pedidos agrupados por proveedor, solo con lo marcado como faltante. Ajustá la cantidad si esta vez pedís distinto de lo habitual.</div>
+    <div id="armarContainer"></div>
+  </div>
+
+  <!-- CATALOGO -->
+  <div class="panel" id="panel-catalogo">
+    <div class="row-actions">
+      <button class="btn secondary" id="btnNuevoProveedor">+ Proveedor</button>
+      <button class="btn" id="btnNuevoMaterial">+ Material</button>
+    </div>
+    <div id="catalogoContainer"></div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div class="panel" id="panel-historial">
+    <div id="historialContainer"></div>
+  </div>
+</div>
+
+<!-- Modal Proveedor -->
+<div class="modal-bg" id="modalProvBg">
+  <div class="modal">
+    <h2 id="modalProvTitle">Nuevo proveedor</h2>
+    <div class="field"><label>Nombre</label><input id="p_nombre" placeholder="Ej: Cueros del Sur"></div>
+    <div class="field"><label>WhatsApp (con código de país, solo números)</label><input id="p_telefono" placeholder="Ej: 5493511234567"></div>
+    <div class="modal-foot">
+      <button class="btn secondary" id="btnCancelarProv">Cancelar</button>
+      <button class="btn" id="btnGuardarProv">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Material -->
+<div class="modal-bg" id="modalMatBg">
+  <div class="modal">
+    <h2 id="modalMatTitle">Nuevo material</h2>
+    <div class="img-preview" id="matImgPreview">Sin foto</div>
+    <div class="field"><label>Foto (opcional, ayuda a diferenciarlo)</label><input type="file" id="m_imagen" accept="image/*"></div>
+    <div class="field"><label>Proveedor</label><select id="m_proveedor"></select></div>
+    <div class="field"><label>Material (nombre general)</label><input id="m_base" placeholder="Ej: EVA 5mm"></div>
+    <div class="field"><label>Variante (color, ancho, etc.)</label><input id="m_variante" placeholder="Ej: Negro 60cm"></div>
+    <div class="two-col">
+      <div class="field"><label>Unidad</label><input id="m_unidad" placeholder="Ej: plancha, m, kg"></div>
+      <div class="field"><label>Cantidad habitual a pedir</label><input id="m_cantidad" type="number" min="0" step="0.5" value="1"></div>
+    </div>
+    <div class="field"><label>Precio (opcional)</label><input id="m_precio" type="number" min="0" step="0.01" placeholder="Ej: 4500"></div>
+    <div class="modal-foot">
+      <button class="btn secondary" id="btnCancelarMat">Cancelar</button>
+      <button class="btn" id="btnGuardarMat">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let proveedores = [];
+let materiales = [];
+let historial = [];
+let editingProvId = null;
+let editingMatId = null;
+let pendingImagen = null;
+
+function loadData(){
+  try{ const r = localStorage.getItem('proveedores-data'); proveedores = r ? JSON.parse(r) : []; }catch(e){ proveedores = []; }
+  try{ const r = localStorage.getItem('materiales-data'); materiales = r ? JSON.parse(r) : []; }catch(e){ materiales = []; }
+  try{ const r = localStorage.getItem('historial-data'); historial = r ? JSON.parse(r) : []; }catch(e){ historial = []; }
+  renderAll();
+}
+function saveProveedores(){ try{ localStorage.setItem('proveedores-data', JSON.stringify(proveedores)); }catch(e){ console.error(e); alert('No se pudo guardar (¿espacio lleno?). Probá exportar una copia.'); } }
+function saveMateriales(){ try{ localStorage.setItem('materiales-data', JSON.stringify(materiales)); }catch(e){ console.error(e); alert('No se pudo guardar (¿espacio lleno?). Probá exportar una copia.'); } }
+function saveHistorial(){ try{ localStorage.setItem('historial-data', JSON.stringify(historial)); }catch(e){ console.error(e); } }
+
+function exportarBackup(){
+  const data = { proveedores, materiales, historial, exportado: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'taller-plantillas-backup-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importarBackup(file){
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!confirm('Esto va a reemplazar los datos actuales de este dispositivo por los del archivo. ¿Continuar?')) return;
+      proveedores = data.proveedores || [];
+      materiales = data.materiales || [];
+      historial = data.historial || [];
+      saveProveedores(); saveMateriales(); saveHistorial();
+      renderAll();
+      alert('Datos importados correctamente.');
+    }catch(err){ alert('El archivo no es una copia de seguridad válida.'); }
+  };
+  reader.readAsText(file);
+}
+
+function renderAll(){
+  renderMarcar();
+  renderArmar();
+  renderCatalogo();
+  renderHistorial();
+  const count = materiales.filter(m=>m.falta).length;
+  const badge = document.getElementById('countFaltantes');
+  if(count>0){ badge.style.display='inline-block'; badge.textContent=count; } else { badge.style.display='none'; }
+}
+
+function escapeHtml(str){ return String(str||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function genId(){ return Math.random().toString(36).slice(2,8); }
+function provNombre(id){ const p = proveedores.find(x=>x.id===id); return p ? p.nombre : '(sin proveedor)'; }
+
+/* ---------- MARCAR ---------- */
+function renderMarcar(){
+  const grid = document.getElementById('marcarGrid');
+  if(materiales.length===0){
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1;"><h3>Todavía no hay materiales cargados</h3><p>Andá a "Catálogo" para agregar los primeros.</p></div>';
+    return;
+  }
+  grid.innerHTML = materiales.map(m=>`
+    <button class="mcard ${m.falta?'falta':''}" data-toggle="${m.id}">
+      <div class="thumb" style="${m.imagen?`background-image:url('${m.imagen}')`:''}">${m.imagen?'':'Sin foto'}</div>
+      <div class="info">
+        <div class="base">${escapeHtml(m.base)}</div>
+        <div class="variante">${escapeHtml(m.variante||'')}</div>
+        <div class="prov">${escapeHtml(provNombre(m.proveedorId))}</div>
+        ${m.falta?'<div class="flag">⚠ Falta pedir</div>':''}
+      </div>
+    </button>`).join('');
+  grid.querySelectorAll('[data-toggle]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const m = materiales.find(x=>x.id===btn.dataset.toggle);
+      m.falta = !m.falta;
+      await saveMateriales();
+      renderAll();
+    });
+  });
+}
+
+/* ---------- ARMAR PEDIDO ---------- */
+function renderArmar(){
+  const container = document.getElementById('armarContainer');
+  const faltantes = materiales.filter(m=>m.falta);
+  if(faltantes.length===0){
+    container.innerHTML = '<div class="empty"><h3>No hay nada marcado como faltante</h3><p>Marcá materiales en la pestaña "Marcar faltantes" para armar un pedido.</p></div>';
+    return;
+  }
+  const porProveedor = {};
+  faltantes.forEach(m=>{
+    if(!porProveedor[m.proveedorId]) porProveedor[m.proveedorId] = [];
+    porProveedor[m.proveedorId].push(m);
+  });
+
+  container.innerHTML = Object.entries(porProveedor).map(([provId, items])=>{
+    const prov = proveedores.find(p=>p.id===provId);
+    const rows = items.map(m=>`
+      <div class="item-row">
+        <div class="item-thumb" style="${m.imagen?`background-image:url('${m.imagen}')`:''}"></div>
+        <div class="item-name"><b>${escapeHtml(m.base)}</b><span>${escapeHtml(m.variante||'')}</span></div>
+        <input class="item-qty" type="number" min="0" step="0.5" value="${m.cantidadHabitual||1}" data-qty="${m.id}">
+        <div class="item-unit">${escapeHtml(m.unidad||'')}</div>
+      </div>`).join('');
+    return `
+      <div class="prov-block" data-prov="${provId}">
+        <h3>${escapeHtml(prov?prov.nombre:'(sin proveedor)')}</h3>
+        ${rows}
+        <div class="prov-actions">
+          <button class="btn wax" data-gen="${provId}">Generar mensaje</button>
+          ${prov && prov.telefono ? `<button class="btn secondary" data-wa="${provId}">Abrir WhatsApp</button>` : ''}
+          <button class="btn secondary" data-enviado="${provId}">Marcar pedido como enviado</button>
+        </div>
+        <textarea class="msg-box" id="msg-${provId}" style="display:none;" readonly></textarea>
+      </div>`;
+  }).join('');
+
+  container.querySelectorAll('[data-gen]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const box = document.getElementById('msg-'+btn.dataset.gen);
+      box.value = buildMensaje(btn.dataset.gen);
+      box.style.display = 'block';
+    });
+  });
+  container.querySelectorAll('[data-wa]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const prov = proveedores.find(p=>p.id===btn.dataset.wa);
+      const msg = buildMensaje(btn.dataset.wa);
+      const url = 'https://wa.me/'+prov.telefono.replace(/\D/g,'')+'?text='+encodeURIComponent(msg);
+      window.open(url, '_blank');
+    });
+  });
+  container.querySelectorAll('[data-enviado]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const provId = btn.dataset.enviado;
+      if(!confirm('¿Marcar este pedido como enviado? Se va a guardar en el historial y se van a desmarcar los faltantes.')) return;
+      const items = materiales.filter(m=>m.falta && m.proveedorId===provId);
+      const qtys = {};
+      document.querySelectorAll(`.prov-block[data-prov="${provId}"] [data-qty]`).forEach(inp=>{ qtys[inp.dataset.qty] = Number(inp.value)||0; });
+      historial.unshift({
+        id: genId(),
+        fecha: new Date().toISOString().slice(0,10),
+        proveedorId: provId,
+        proveedorNombre: provNombre(provId),
+        items: items.map(m=>({base:m.base, variante:m.variante, cantidad:qtys[m.id], unidad:m.unidad}))
+      });
+      items.forEach(m=> m.falta=false);
+      await saveHistorial();
+      await saveMateriales();
+      renderAll();
+    });
+  });
+}
+function buildMensaje(provId){
+  const prov = proveedores.find(p=>p.id===provId);
+  const items = materiales.filter(m=>m.falta && m.proveedorId===provId);
+  const qtyInputs = document.querySelectorAll(`.prov-block[data-prov="${provId}"] [data-qty]`);
+  const qtys = {};
+  qtyInputs.forEach(inp=>{ qtys[inp.dataset.qty] = inp.value; });
+  let msg = `Hola${prov?', '+prov.nombre:''}! Te hago un pedido:\n\n`;
+  items.forEach(m=>{
+    msg += `- ${m.base}${m.variante?' '+m.variante:''}: ${qtys[m.id]||m.cantidadHabitual} ${m.unidad||''}\n`;
+  });
+  msg += '\nGracias!';
+  return msg;
+}
+
+/* ---------- CATALOGO ---------- */
+function renderCatalogo(){
+  const container = document.getElementById('catalogoContainer');
+  document.getElementById('m_proveedor').innerHTML = proveedores.map(p=>`<option value="${p.id}">${escapeHtml(p.nombre)}</option>`).join('');
+
+  if(proveedores.length===0){
+    container.innerHTML = '<div class="empty"><h3>Todavía no hay proveedores</h3><p>Agregá el primero con "+ Proveedor".</p></div>';
+    return;
+  }
+
+  container.innerHTML = proveedores.map(prov=>{
+    const mats = materiales.filter(m=>m.proveedorId===prov.id);
+    const bases = {};
+    mats.forEach(m=>{
+      const key = m.base.trim().toLowerCase();
+      if(!bases[key]) bases[key] = {nombre:m.base, items:[]};
+      bases[key].items.push(m);
+    });
+    const basesHtml = Object.values(bases).map(b=>`
+      <div class="cat-base">
+        <div class="cat-base-title">${escapeHtml(b.nombre)}</div>
+        ${b.items.map(m=>`
+          <div class="cat-row">
+            <div class="cat-thumb" style="${m.imagen?`background-image:url('${m.imagen}')`:''}"></div>
+            <div class="cname">${escapeHtml(m.variante||'—')} · ${m.cantidadHabitual||1} ${escapeHtml(m.unidad||'')}${m.precio?' · $'+m.precio:''}</div>
+            <div class="cactions">
+              <button class="small-btn" data-editmat="${m.id}">Editar</button>
+              <button class="small-btn" data-delmat="${m.id}">Eliminar</button>
+            </div>
+          </div>`).join('')}
+      </div>`).join('');
+    return `
+      <div class="cat-group">
+        <h3>${escapeHtml(prov.nombre)} ${prov.telefono?'<span style="font-size:11px;color:var(--muted);font-weight:400;">('+escapeHtml(prov.telefono)+')</span>':''}
+          <span style="float:right;">
+            <button class="small-btn" data-editprov="${prov.id}">Editar</button>
+            <button class="small-btn" data-delprov="${prov.id}">Eliminar</button>
+          </span>
+        </h3>
+        ${mats.length ? basesHtml : '<div class="hint">Sin materiales cargados para este proveedor.</div>'}
+      </div>`;
+  }).join('');
+
+  container.querySelectorAll('[data-editprov]').forEach(b=> b.addEventListener('click', ()=> openEditProv(b.dataset.editprov)));
+  container.querySelectorAll('[data-delprov]').forEach(b=> b.addEventListener('click', async ()=>{
+    if(confirm('¿Eliminar este proveedor y sus materiales asociados?')){
+      const id = b.dataset.delprov;
+      proveedores = proveedores.filter(p=>p.id!==id);
+      materiales = materiales.filter(m=>m.proveedorId!==id);
+      await saveProveedores(); await saveMateriales(); renderAll();
+    }
+  }));
+  container.querySelectorAll('[data-editmat]').forEach(b=> b.addEventListener('click', ()=> openEditMat(b.dataset.editmat)));
+  container.querySelectorAll('[data-delmat]').forEach(b=> b.addEventListener('click', async ()=>{
+    if(confirm('¿Eliminar este material?')){
+      materiales = materiales.filter(m=>m.id!==b.dataset.delmat);
+      await saveMateriales(); renderAll();
+    }
+  }));
+}
+
+/* ---------- HISTORIAL ---------- */
+function renderHistorial(){
+  const container = document.getElementById('historialContainer');
+  if(historial.length===0){
+    container.innerHTML = '<div class="empty"><h3>Todavía no enviaron ningún pedido</h3><p>Cuando marquen un pedido como enviado, va a aparecer acá.</p></div>';
+    return;
+  }
+  container.innerHTML = historial.map(h=>`
+    <div class="hist-item">
+      <div class="hdate">${formatFecha(h.fecha)}</div>
+      <div class="hprov">${escapeHtml(h.proveedorNombre)}</div>
+      <ul>${h.items.map(it=>`<li>${escapeHtml(it.base)}${it.variante?' '+escapeHtml(it.variante):''}: ${it.cantidad} ${escapeHtml(it.unidad||'')}</li>`).join('')}</ul>
+    </div>`).join('');
+}
+function formatFecha(f){ const [y,m,d]=f.split('-'); return `${d}/${m}/${y}`; }
+
+/* ---------- MODALES: Proveedor ---------- */
+function openNewProv(){
+  editingProvId = null;
+  document.getElementById('modalProvTitle').textContent='Nuevo proveedor';
+  document.getElementById('p_nombre').value='';
+  document.getElementById('p_telefono').value='';
+  document.getElementById('modalProvBg').classList.add('open');
+}
+function openEditProv(id){
+  const p = proveedores.find(x=>x.id===id); if(!p) return;
+  editingProvId = id;
+  document.getElementById('modalProvTitle').textContent='Editar proveedor';
+  document.getElementById('p_nombre').value=p.nombre;
+  document.getElementById('p_telefono').value=p.telefono||'';
+  document.getElementById('modalProvBg').classList.add('open');
+}
+function closeProvModal(){ document.getElementById('modalProvBg').classList.remove('open'); }
+async function saveProvForm(){
+  const nombre = document.getElementById('p_nombre').value.trim();
+  if(!nombre){ alert('Ingresá el nombre del proveedor.'); return; }
+  const data = { nombre, telefono: document.getElementById('p_telefono').value.trim() };
+  if(editingProvId){ Object.assign(proveedores.find(p=>p.id===editingProvId), data); }
+  else{ proveedores.push({ id: genId(), ...data }); }
+  await saveProveedores();
+  renderAll();
+  closeProvModal();
+}
+
+/* ---------- MODALES: Material ---------- */
+function openNewMat(){
+  if(proveedores.length===0){ alert('Primero agregá al menos un proveedor.'); return; }
+  editingMatId = null;
+  pendingImagen = null;
+  document.getElementById('modalMatTitle').textContent='Nuevo material';
+  document.getElementById('matImgPreview').style.backgroundImage='';
+  document.getElementById('matImgPreview').textContent='Sin foto';
+  document.getElementById('m_imagen').value='';
+  document.getElementById('m_base').value='';
+  document.getElementById('m_variante').value='';
+  document.getElementById('m_unidad').value='';
+  document.getElementById('m_cantidad').value=1;
+  document.getElementById('m_precio').value='';
+  document.getElementById('modalMatBg').classList.add('open');
+}
+function openEditMat(id){
+  const m = materiales.find(x=>x.id===id); if(!m) return;
+  editingMatId = id;
+  pendingImagen = m.imagen || null;
+  document.getElementById('modalMatTitle').textContent='Editar material';
+  const preview = document.getElementById('matImgPreview');
+  if(m.imagen){ preview.style.backgroundImage=`url('${m.imagen}')`; preview.textContent=''; }
+  else{ preview.style.backgroundImage=''; preview.textContent='Sin foto'; }
+  document.getElementById('m_imagen').value='';
+  document.getElementById('m_proveedor').value=m.proveedorId;
+  document.getElementById('m_base').value=m.base;
+  document.getElementById('m_variante').value=m.variante||'';
+  document.getElementById('m_unidad').value=m.unidad||'';
+  document.getElementById('m_cantidad').value=m.cantidadHabitual||1;
+  document.getElementById('m_precio').value=m.precio||'';
+  document.getElementById('modalMatBg').classList.add('open');
+}
+function closeMatModal(){ document.getElementById('modalMatBg').classList.remove('open'); }
+
+document.getElementById('m_imagen').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    img.onload = ()=>{
+      const maxSize = 220;
+      let w = img.width, h = img.height;
+      if(w>h){ if(w>maxSize){ h = h*maxSize/w; w = maxSize; } }
+      else { if(h>maxSize){ w = w*maxSize/h; h = maxSize; } }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      pendingImagen = canvas.toDataURL('image/jpeg', 0.65);
+      const preview = document.getElementById('matImgPreview');
+      preview.style.backgroundImage = `url('${pendingImagen}')`;
+      preview.textContent='';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+async function saveMatForm(){
+  const base = document.getElementById('m_base').value.trim();
+  if(!base){ alert('Ingresá el nombre del material.'); return; }
+  const data = {
+    proveedorId: document.getElementById('m_proveedor').value,
+    base,
+    variante: document.getElementById('m_variante').value.trim(),
+    unidad: document.getElementById('m_unidad').value.trim(),
+    cantidadHabitual: Number(document.getElementById('m_cantidad').value)||1,
+    precio: document.getElementById('m_precio').value ? Number(document.getElementById('m_precio').value) : null,
+    imagen: pendingImagen
+  };
+  if(editingMatId){ Object.assign(materiales.find(m=>m.id===editingMatId), data); }
+  else{ materiales.push({ id: genId(), falta:false, ...data }); }
+  await saveMateriales();
+  renderAll();
+  closeMatModal();
+}
+
+/* ---------- NAV Y EVENTOS ---------- */
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-'+tab.dataset.tab).classList.add('active');
+  });
+});
+document.getElementById('btnNuevoProveedor').addEventListener('click', openNewProv);
+document.getElementById('btnCancelarProv').addEventListener('click', closeProvModal);
+document.getElementById('btnGuardarProv').addEventListener('click', saveProvForm);
+document.getElementById('btnNuevoMaterial').addEventListener('click', openNewMat);
+document.getElementById('btnCancelarMat').addEventListener('click', closeMatModal);
+document.getElementById('btnGuardarMat').addEventListener('click', saveMatForm);
+document.getElementById('btnExportar').addEventListener('click', exportarBackup);
+document.getElementById('inputImportar').addEventListener('change', (e)=>{
+  if(e.target.files[0]) importarBackup(e.target.files[0]);
+  e.target.value = '';
+});
+
+loadData();
+</script>
+</body>
+</html>
